@@ -6,7 +6,7 @@ import {
   Box, Typography, Chip, Button,
   TextField, Avatar, Divider,
   CircularProgress, Alert, MenuItem,
-  IconButton, Tooltip,
+  IconButton, Tooltip, Grid
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import SendIcon from '@mui/icons-material/Send'
@@ -15,6 +15,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SaveIcon from '@mui/icons-material/Save'
 import CancelIcon from '@mui/icons-material/Cancel'
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import DescriptionIcon from '@mui/icons-material/Description'
 import { Task } from '@/types'
 import { useTask, useAddComment, useUpdateTask, useDeleteTask } from '@/lib/queries/tasks'
 import { useEmployees } from '@/lib/queries/users'
@@ -35,15 +37,20 @@ const priorities = [
 ]
 
 const statuses = [
-  { value: 'Todo',       label: 'To Do' },
+  { value: 'Todo', label: 'To Do' },
   { value: 'InProgress', label: 'In Progress' },
-  { value: 'InReview',   label: 'In Review' },
-  { value: 'Done',       label: 'Done' },
-  { value: 'Cancelled',  label: 'Cancelled' },
+  { value: 'InReview', label: 'In Review' },
+  { value: 'Done', label: 'Done' },
+  { value: 'Cancelled', label: 'Cancelled' },
 ]
 
-const priorityColors: Record<string, 'default' | 'warning' | 'error' | 'primary'> = {
-  Low: 'default', Medium: 'primary', High: 'warning', Critical: 'error',
+const getPriorityColor = (priority: string) => {
+  switch (priority?.toLowerCase()) {
+    case 'critical': return '#dc2626'
+    case 'high': return '#f59e0b'
+    case 'medium': return '#2563eb'
+    default: return '#94a3b8'
+  }
 }
 
 const statusColors: Record<string, string> = {
@@ -52,30 +59,29 @@ const statusColors: Record<string, string> = {
 }
 
 export default function TaskDetailModal({ taskId, onClose }: Props) {
-  const { user }                      = useAuthStore()
-  const isEmployee                    = user?.role === 'Employee'
+  const { user } = useAuthStore()
+  const isEmployee = user?.role === 'Employee'
 
-  const [comment,    setComment]      = useState('')
-  const [aiSummary,  setAiSummary]    = useState('')
-  const [loadingAi,  setLoadingAi]    = useState(false)
-  const [editMode,   setEditMode]     = useState(false)
-  const [confirmDel, setConfirmDel]   = useState(false)
+  const [comment, setComment] = useState('')
+  const [aiSummary, setAiSummary] = useState('')
+  const [loadingAi, setLoadingAi] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
 
   // Edit form state
-  const [editTitle,      setEditTitle]      = useState('')
-  const [editDesc,       setEditDesc]       = useState('')
-  const [editStatus,     setEditStatus]     = useState('')
-  const [editPriority,   setEditPriority]   = useState(0)
-  const [editDueDate,    setEditDueDate]    = useState('')
+  const [editTitle, setEditTitle] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editStatus, setEditStatus] = useState('')
+  const [editPriority, setEditPriority] = useState(0)
+  const [editDueDate, setEditDueDate] = useState('')
   const [editAssignedTo, setEditAssignedTo] = useState('')
 
-  const { data: task, isLoading }  = useTask(taskId ?? '')
-  const { data: employees = [] }   = useEmployees()
-  const addComment                 = useAddComment()
-  const updateTask                 = useUpdateTask()
-  const deleteTask                 = useDeleteTask()
+  const { data: task, isLoading } = useTask(taskId ?? '')
+  const { data: employees = [] } = useEmployees()
+  const addComment = useAddComment()
+  const updateTask = useUpdateTask()
+  const deleteTask = useDeleteTask()
 
-  // Populate edit form when task loads
   useEffect(() => {
     if (task) {
       setEditTitle(task.title)
@@ -97,24 +103,22 @@ export default function TaskDetailModal({ taskId, onClose }: Props) {
     setComment('')
   }
 
- const handleSaveEdit = async () => {
-  if (!taskId) return
-
-  const priorityLabels = ['Low', 'Medium', 'High', 'Critical']
-
-  await updateTask.mutateAsync({
-    id: taskId,
-    data: {
-      title:        editTitle,
-      description:  editDesc,
-      status:       editStatus,
-      priority:     priorityLabels[editPriority],
-      dueDate:      new Date(editDueDate).toISOString(),
-      assignedToId: editAssignedTo,
-    },
-  })
-  setEditMode(false)
-}
+  const handleSaveEdit = async () => {
+    if (!taskId) return
+    const priorityLabels = ['Low', 'Medium', 'High', 'Critical']
+    await updateTask.mutateAsync({
+      id: taskId,
+      data: {
+        title: editTitle,
+        description: editDesc,
+        status: editStatus,
+        priority: priorityLabels[editPriority],
+        dueDate: new Date(editDueDate).toISOString(),
+        assignedToId: editAssignedTo,
+      },
+    })
+    setEditMode(false)
+  }
 
   const handleDelete = async () => {
     if (!taskId) return
@@ -139,367 +143,399 @@ export default function TaskDetailModal({ taskId, onClose }: Props) {
     <Dialog
       open={!!taskId}
       onClose={onClose}
-      maxWidth="md"
+      maxWidth="lg"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      slotProps={{ paper: { sx: { borderRadius: 3, height: '85vh', maxHeight: 800 } } }}
     >
       {isLoading ? (
-        <Box sx={{ p: 4, textAlign: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
           <CircularProgress />
         </Box>
       ) : task ? (
-        <>
-          {/* ── TITLE BAR ─────────────────────────────────── */}
-          <DialogTitle sx={{
-            display: 'flex', justifyContent: 'space-between',
-            alignItems: 'flex-start', pb: 1,
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* ── HEADER ─────────────────────────────────── */}
+          <Box sx={{
+            px: 3, py: 2,
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
           }}>
-            <Box sx={{ flex: 1, pr: 2 }}>
-              {editMode ? (
-                <TextField
-                  fullWidth
-                  size="small"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  sx={{ mb: 1 }}
-                />
-              ) : (
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {task.title}
-                </Typography>
-              )}
-
-              {!editMode && (
-                <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                  <Chip
-                    label={task.status}
-                    size="small"
-                    sx={{ bgcolor: statusColors[task.status], color: 'white' }}
-                  />
-                  <Chip
-                    label={task.priority}
-                    size="small"
-                    color={priorityColors[task.priority]}
-                    variant="outlined"
-                  />
-                  {task.isOverdue && (
-                    <Chip label="Overdue" size="small" color="error" />
-                  )}
-                  {task.isHighRisk && (
-                    <Chip label="High Risk" size="small" color="warning" />
-                  )}
-                </Box>
-              )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+                TASK-{task.id.split('-')[0].toUpperCase()}
+              </Typography>
             </Box>
 
-            {/* Action buttons */}
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
               {!isEmployee && !editMode && (
                 <>
-                  <Tooltip title="Edit Task">
-                    <IconButton
-                      size="small"
-                      onClick={() => setEditMode(true)}
-                      sx={{ color: '#2563eb' }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete Task">
-                    <IconButton
-                      size="small"
-                      onClick={() => setConfirmDel(true)}
-                      sx={{ color: '#dc2626' }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => setEditMode(true)}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setConfirmDel(true)}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Delete
+                  </Button>
                 </>
               )}
               {editMode && (
                 <>
-                  <Tooltip title="Save Changes">
-                    <IconButton
-                      size="small"
-                      onClick={handleSaveEdit}
-                      sx={{ color: '#16a34a' }}
-                      disabled={updateTask.isPending}
-                    >
-                      {updateTask.isPending
-                        ? <CircularProgress size={16} />
-                        : <SaveIcon fontSize="small" />}
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Cancel Edit">
-                    <IconButton
-                      size="small"
-                      onClick={() => setEditMode(false)}
-                      sx={{ color: '#64748b' }}
-                    >
-                      <CancelIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="success"
+                    startIcon={updateTask.isPending ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                    onClick={handleSaveEdit}
+                    disabled={updateTask.isPending}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="inherit"
+                    startIcon={<CancelIcon />}
+                    onClick={() => setEditMode(false)}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Cancel
+                  </Button>
                 </>
               )}
-              <IconButton size="small" onClick={onClose}>
+              <IconButton size="small" onClick={onClose} sx={{ ml: 1 }}>
                 <CloseIcon />
               </IconButton>
             </Box>
-          </DialogTitle>
+          </Box>
 
-          <DialogContent>
+          {/* ── BODY ─────────────────────────────────── */}
+          <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-            {/* ── DELETE CONFIRMATION ──────────────────────── */}
-            {confirmDel && (
-              <Alert
-                severity="error"
-                sx={{ mb: 2 }}
-                action={
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="contained"
-                      onClick={handleDelete}
-                      disabled={deleteTask.isPending}
-                    >
-                      {deleteTask.isPending ? 'Deleting...' : 'Yes, Delete'}
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => setConfirmDel(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </Box>
-                }
-              >
-                Are you sure you want to delete this task? This cannot be undone.
-              </Alert>
-            )}
+            {/* ── LEFT COLUMN ───────────────────────────── */}
+            <Box sx={{
+              flex: 2,
+              p: 4,
+              overflowY: 'auto',
+              borderRight: '1px solid #e2e8f0'
+            }}>
 
-            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              {confirmDel && (
+                <Alert
+                  severity="error"
+                  sx={{ mb: 3 }}
+                  action={
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" color="error" variant="contained" onClick={handleDelete} disabled={deleteTask.isPending}>
+                        {deleteTask.isPending ? 'Deleting...' : 'Yes, Delete'}
+                      </Button>
+                      <Button size="small" onClick={() => setConfirmDel(false)}>Cancel</Button>
+                    </Box>
+                  }
+                >
+                  Are you sure you want to delete this task? This cannot be undone.
+                </Alert>
+              )}
 
-              {/* ── LEFT COLUMN ───────────────────────────── */}
-              <Box sx={{ flex: 2, minWidth: 280 }}>
+              {editMode ? (
+                <TextField
+                  fullWidth
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  sx={{ mb: 4, '& .MuiInputBase-input': { fontSize: '1.5rem', fontWeight: 700 } }}
+                  variant="standard"
+                />
+              ) : (
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a', mb: 4, lineHeight: 1.3 }}>
+                  {task.title}
+                </Typography>
+              )}
 
-                {/* Description */}
+              {/* Description */}
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <DescriptionIcon sx={{ color: '#64748b' }} /> Description
+                </Typography>
+
                 {editMode ? (
                   <TextField
                     fullWidth
                     multiline
-                    rows={3}
-                    label="Description"
+                    rows={4}
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
-                    sx={{ mb: 2 }}
                   />
                 ) : (
-                  <Typography
-                    variant="body2"
-                    sx={{ color: 'text.secondary', mb: 3 }}
+                  <Box sx={{ pl: 4 }}>
+                    <Typography variant="body1" sx={{ color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                      {task.description || 'No description provided.'}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+
+              {/* AI Summary */}
+              {!editMode && (
+                <Box sx={{ pl: 4, mb: 4 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={loadingAi ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
+                    onClick={handleAiSummary}
+                    disabled={loadingAi}
+                    size="small"
+                    sx={{
+                      borderColor: '#8b5cf6',
+                      color: '#8b5cf6',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      mb: 2,
+                      '&:hover': { borderColor: '#7c3aed', bgcolor: '#f5f3ff' },
+                    }}
                   >
-                    {task.description || 'No description provided.'}
-                  </Typography>
-                )}
+                    {loadingAi ? 'Generating...' : 'Summarize Thread with AI'}
+                  </Button>
 
-                {/* AI Summary Button */}
-                {!editMode && (
-                  <>
-                    <Button
-                      variant="outlined"
-                      startIcon={
-                        loadingAi
-                          ? <CircularProgress size={16} />
-                          : <AutoAwesomeIcon />
-                      }
-                      onClick={handleAiSummary}
-                      disabled={loadingAi}
-                      size="small"
-                      sx={{
-                        mb: 2,
-                        borderColor: '#7c3aed',
-                        color: '#7c3aed',
-                        '&:hover': {
-                          borderColor: '#6d28d9',
-                          bgcolor: '#faf5ff',
-                        },
-                      }}
+                  {aiSummary && (
+                    <Alert
+                      icon={<AutoAwesomeIcon sx={{ color: '#8b5cf6' }} />}
+                      sx={{ bgcolor: '#f5f3ff', border: '1px solid #ddd6fe', color: '#4c1d95', borderRadius: 2 }}
                     >
-                      {loadingAi ? 'Generating...' : 'AI Summary'}
-                    </Button>
+                      <Typography variant="body2">{aiSummary}</Typography>
+                    </Alert>
+                  )}
+                </Box>
+              )}
 
-                    {aiSummary && (
-                      <Alert
-                        severity="info"
-                        icon={<AutoAwesomeIcon />}
-                        sx={{ mb: 2, bgcolor: '#faf5ff', border: '1px solid #e9d5ff' }}
-                      >
-                        <Typography variant="body2">{aiSummary}</Typography>
-                      </Alert>
-                    )}
-                  </>
-                )}
+              {/* Comments */}
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <ForumOutlinedIcon sx={{ fontSize: 16, mr: 1.5, color: '#64748b' }} />                </Typography>
 
-                <Divider sx={{ mb: 2 }} />
+                <Box sx={{ pl: 4 }}>
+                  {/* Add Comment Input */}
+                  <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: '#e2e8f0', color: '#475569' }}>
+                      {user?.name?.charAt(0) || 'U'}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="Add a comment..."
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            handleAddComment()
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': { borderRadius: 2 },
+                          bgcolor: 'white'
+                        }}
+                      />
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                        <Button
+                          variant="contained"
+                          onClick={handleAddComment}
+                          disabled={!comment.trim() || addComment.isPending}
+                          size="small"
+                          sx={{ textTransform: 'none', fontWeight: 600 }}
+                        >
+                          Save
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
 
-                {/* Comments */}
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
-                  Comments ({task.commentCount})
-                </Typography>
-
-                <Box sx={{ maxHeight: 240, overflow: 'auto', mb: 2 }}>
+                  {/* Comment List */}
                   {(task as any).comments?.length === 0 ? (
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                       No comments yet.
                     </Typography>
                   ) : (
                     (task as any).comments?.map((c: any) => (
-                      <Box key={c.id} sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-                        <Avatar sx={{ width: 30, height: 30, fontSize: 12, bgcolor: '#3b82f6' }}>
+                      <Box key={c.id} sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                        <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: '#3b82f6' }}>
                           {c.userName?.charAt(0)}
                         </Avatar>
-                        <Box sx={{ flex: 1, bgcolor: '#f8fafc', borderRadius: 2, p: 1.5 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0f172a' }}>
                               {c.userName}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {format(new Date(c.createdAt), 'dd MMM, HH:mm')}
+                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                              {format(new Date(c.createdAt), 'MMM d, yyyy HH:mm')}
                             </Typography>
                           </Box>
-                          <Typography variant="body2">{c.message}</Typography>
+                          <Typography variant="body2" sx={{ color: '#334155' }}>{c.message}</Typography>
                         </Box>
                       </Box>
                     ))
                   )}
                 </Box>
-
-                {/* Add Comment */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Write a comment..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        handleAddComment()
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleAddComment}
-                    disabled={!comment.trim() || addComment.isPending}
-                    sx={{ minWidth: 0, px: 2 }}
-                  >
-                    <SendIcon fontSize="small" />
-                  </Button>
-                </Box>
               </Box>
 
-              {/* ── RIGHT COLUMN ──────────────────────────── */}
+            </Box>
+
+            {/* ── RIGHT COLUMN ──────────────────────────── */}
+            <Box sx={{
+              flex: 1,
+              bgcolor: '#f8fafc',
+              p: 4,
+              overflowY: 'auto'
+            }}>
               <Box sx={{
-                flex: 1, minWidth: 200,
-                bgcolor: '#f8fafc', borderRadius: 2, p: 2,
-                height: 'fit-content',
+                bgcolor: 'white',
+                borderRadius: 2,
+                border: '1px solid #e2e8f0',
+                p: 3
               }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-                  Task Details
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#64748b', mb: 3, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Details
                 </Typography>
 
                 {editMode ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                      select
-                      label="Status"
-                      size="small"
-                      fullWidth
-                      value={editStatus}
-                      onChange={(e) => setEditStatus(e.target.value)}
-                    >
-                      {statuses.map((s) => (
-                        <MenuItem key={s.value} value={s.value}>
-                          {s.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                    <TextField
-                      select
-                      label="Priority"
-                      size="small"
-                      fullWidth
-                      value={editPriority}
-                      onChange={(e) => setEditPriority(Number(e.target.value))}
-                    >
-                      {priorities.map((p) => (
-                        <MenuItem key={p.value} value={p.value}>
-                          {p.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                   <TextField
-                    label="Due Date"
-                    type="date"
-                    size="small"
-                    fullWidth
-                    value={editDueDate}
-                    onChange={(e) => setEditDueDate(e.target.value)}
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    />
-
-                    <TextField
-                      select
-                      label="Assigned To"
-                      size="small"
-                      fullWidth
-                      value={editAssignedTo}
-                      onChange={(e) => setEditAssignedTo(e.target.value)}
-                    >
-                      {employees.map((emp) => (
-                        <MenuItem key={emp.id} value={emp.id}>
-                          {emp.name} — {emp.department}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Box>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                        select
+                        label="Status"
+                        size="small"
+                        fullWidth
+                        value={editStatus}
+                        onChange={(e) => setEditStatus(e.target.value)}
+                      >
+                        {statuses.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+                      </TextField>
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                        select
+                        label="Priority"
+                        size="small"
+                        fullWidth
+                        value={editPriority}
+                        onChange={(e) => setEditPriority(Number(e.target.value))}
+                      >
+                        {priorities.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
+                      </TextField>
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                        label="Due Date"
+                        type="date"
+                        size="small"
+                        fullWidth
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                        slotProps={{ inputLabel: { shrink: true } }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                        select
+                        label="Assignee"
+                        size="small"
+                        fullWidth
+                        value={editAssignedTo}
+                        onChange={(e) => setEditAssignedTo(e.target.value)}
+                      >
+                        {employees.map((emp) => <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>)}
+                      </TextField>
+                    </Grid>
+                  </Grid>
                 ) : (
-                  <>
-                    {[
-                      { label: 'Assigned To',  value: task.assignedToName },
-                      { label: 'Created By',   value: task.createdByName },
-                      { label: 'Due Date',     value: format(new Date(task.dueDate), 'dd MMM yyyy') },
-                      { label: 'Created',      value: format(new Date(task.createdAt), 'dd MMM yyyy') },
-                      { label: 'Email',        value: task.assignedToEmail },
-                    ].map((item) => (
-                      <Box key={item.label} sx={{ mb: 1.5 }}>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                          {item.label}
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {item.value}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600, display: 'block', mb: 0.5 }}>STATUS</Typography>
+                      <Chip
+                        label={task.status}
+                        size="small"
+                        sx={{
+                          bgcolor: `${statusColors[task.status]}15`,
+                          color: statusColors[task.status],
+                          fontWeight: 700,
+                          borderRadius: 1
+                        }}
+                      />
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600, display: 'block', mb: 0.5 }}>PRIORITY</Typography>
+                      <Chip
+                        label={task.priority}
+                        size="small"
+                        sx={{
+                          bgcolor: `${getPriorityColor(task.priority)}15`,
+                          color: getPriorityColor(task.priority),
+                          fontWeight: 700,
+                          borderRadius: 1
+                        }}
+                      />
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600, display: 'block', mb: 0.5 }}>ASSIGNEE</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#e2e8f0', color: '#475569' }}>
+                          {task.assignedToName?.charAt(0)}
+                        </Avatar>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+                          {task.assignedToName}
                         </Typography>
                       </Box>
-                    ))}
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600, display: 'block', mb: 0.5 }}>DUE DATE</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: task.isOverdue ? '#dc2626' : '#334155' }}>
+                        {format(new Date(task.dueDate), 'MMMM d, yyyy')}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600, display: 'block', mb: 0.5 }}>REPORTER</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#334155' }}>
+                        {task.createdByName}
+                      </Typography>
+                    </Box>
+
+                    <Divider sx={{ my: 1 }} />
+
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600, display: 'block', mb: 0.5 }}>CREATED</Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b' }}>
+                        {format(new Date(task.createdAt), 'MMM d, yyyy HH:mm')}
+                      </Typography>
+                    </Box>
 
                     {task.riskScore > 0 && (
-                      <Box sx={{ mt: 2, p: 1.5, bgcolor: '#fef2f2', borderRadius: 2 }}>
-                        <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-                          Risk Score: {(task.riskScore * 100).toFixed(0)}%
+                      <Box sx={{ mt: 2, p: 2, bgcolor: '#fef2f2', borderRadius: 2, border: '1px solid #fecaca' }}>
+                        <Typography variant="caption" sx={{ color: '#dc2626', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          🔥 RISK SCORE: {(task.riskScore * 100).toFixed(0)}%
                         </Typography>
                       </Box>
                     )}
-                  </>
+                  </Box>
                 )}
               </Box>
             </Box>
-          </DialogContent>
-        </>
+          </Box>
+        </Box>
       ) : null}
     </Dialog>
   )

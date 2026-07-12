@@ -3,6 +3,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/providers'
+import ToastProvider from '@/components/common/ToastProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,6 +23,7 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <Providers>
             {children}
+            <ToastProvider />
           </Providers>
         </AppRouterCacheProvider>
       </body>

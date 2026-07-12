@@ -5,17 +5,16 @@ const publicRoutes = ['/login']
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow public routes
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next()
   }
 
-  // Check for token in cookies or headers
   const token = request.cookies.get('accessToken')?.value
 
-  // If no token redirect to login
   if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(
+      new URL('/login', request.url)
+    )
   }
 
   return NextResponse.next()
@@ -27,5 +26,6 @@ export const config = {
     '/tasks/:path*',
     '/employees/:path*',
     '/ai-assistant/:path*',
+    '/settings/:path*',
   ],
 }

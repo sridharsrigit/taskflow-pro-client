@@ -11,6 +11,7 @@ import TaskIcon from '@mui/icons-material/Assignment'
 import PeopleIcon from '@mui/icons-material/People'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
 import LogoutIcon from '@mui/icons-material/Logout'
+import SettingsIcon from '@mui/icons-material/Settings'
 import { useAuthStore } from '@/store/authStore'
 
 const DRAWER_WIDTH = 260
@@ -20,6 +21,7 @@ const managerLinks = [
   { label: 'Tasks',        href: '/tasks',          icon: <TaskIcon /> },
   { label: 'Employees',    href: '/employees',      icon: <PeopleIcon /> },
   { label: 'AI Assistant', href: '/ai-assistant',  icon: <SmartToyIcon /> },
+  { label: 'Settings',     href: '/settings',       icon: <SettingsIcon /> },
 ]
 
 const employeeLinks = [
